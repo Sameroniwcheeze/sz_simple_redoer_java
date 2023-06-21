@@ -5,6 +5,10 @@ import com.senzing.g2.engine.Result;
 import java.time;
 import java.io.StringReader;
 
+//import java.util.concurrent;
+//or
+import java.util.concurrent.ThreadPoolExecutor;
+
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -30,7 +34,7 @@ public class simpleRedoer {
 
         engineConfig = os.getenv("SENZING_ENGINE_CONFIGURATION_JSON");
 
-        if(engineConfig==NULL){
+        if(engineConfig == NULL){
             System.out.println("The environment variable SENZING_ENGINE_CONFIGURATION_JSON must be set with a proper JSON configuration.");
             System.out.println("Please see https://senzing.zendesk.com/hc/en-us/articles/360038774134-G2Module-Configuration-and-the-Senzing-API");
             System.exit(-1);
@@ -46,7 +50,16 @@ public class simpleRedoer {
         else
             int max_workers = 0;
 
+        int messages = 0;
 
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(max_workers);
+        System.out.println("Threads: " + executor.max_workers());
+        int emptyPause = 0;
+
+
+
+
+        
         System.exit(0);
     }
 
