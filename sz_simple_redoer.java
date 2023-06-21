@@ -2,7 +2,9 @@
 import com.senzing.g2.engine.G2JNI;
 import com.senzing.g2.engine.Result;
 
+import java.time;
 import java.io.StringReader;
+
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -10,6 +12,7 @@ import javax.json.JsonObject;
 
 public class simpleRedoer {
 
+    private Clock time;
     public static void main(String[] args){
         static int INTERVAL = 1000;
         string longRecord = System.getenv("LONG_RECORD");
@@ -23,10 +26,29 @@ public class simpleRedoer {
         else
             static int EMPTY_PAUSE_TIME = 60;
 
-        
+        //Setup info and logging
+
+        engineConfig = os.getenv("SENZING_ENGINE_CONFIGURATION_JSON");
+
+        if(engineConfig==NULL){
+            System.out.println("The environment variable SENZING_ENGINE_CONFIGURATION_JSON must be set with a proper JSON configuration.");
+            System.out.println("Please see https://senzing.zendesk.com/hc/en-us/articles/360038774134-G2Module-Configuration-and-the-Senzing-API");
+            System.exit(-1);
+        }
+
+        G2JNI g2 = new G2JNI();
+        g2.init("sz_simple_redoer", engineConfig, args.debugTrace);
+        int logCheckTime = int prevTime = time.instant();
+
+        string threads = System.getenv("SENZING_THREADS_PER_PROCESS");
+        if(threds != NULL)
+            int max_workers = Integer.parseInt(threads);
+        else
+            int max_workers = 0;
+
+
         System.exit(0);
     }
-
 
     private string processMsg(G2JNI engine, string msg, string info){
         int returnCode = 0;
