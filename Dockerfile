@@ -4,20 +4,20 @@
 ARG BASE_IMAGE=senzing/senzingapi-runtime:latest
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2022-08-27
+ENV REFRESHED_AT=2023-06-21
 
-LABEL Name="brain/sz_simple_redoer" \
+LABEL Name="sam/sz_simple_redoer_java" \
       Maintainer="brianmacy@gmail.com" \
       Version="DEV"
 
-RUN apt-get update \
- && apt-get -y install curl python3 python3-pip python3-psycopg2 \
- && python3 -mpip install orjson \
- && apt-get -y remove build-essential python3-pip \
+# Install OpenJDK-11
+RUN apt-get update  \
+ && apt-get install -y openjdk-11-jre-headless  \
  && apt-get -y autoremove \
- && apt-get -y clean
+ && apt-get clean
 
 COPY sz_simple_redoer.py /app/
+
 RUN curl -X GET \
       --output /app/senzing_governor.py \
       https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/main/senzing_governor.py
