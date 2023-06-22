@@ -5,9 +5,7 @@ import com.senzing.g2.engine.Result;
 import java.time;
 import java.io.StringReader;
 
-//import java.util.concurrent;
-//or
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -52,18 +50,61 @@ public class simpleRedoer {
 
         int messages = 0;
 
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(max_workers);
+        ExecutorService executor = Executors.newFixedThreadPool(max_workers);
         System.out.println("Threads: " + executor.max_workers());
         int emptyPause = 0;
 
+        List<Future<String, Integer>> futures = NULL;
+        try{
+            while(true){
 
+                int nowTime = time.instant();
 
+                if(futures!=NULL){
+                    futures.get(10, TimeUnit.SECONDS);
+
+                    //delete_batch = [];
+                    int deleteCnt = 0;
+                    
+                    for(int i = 0; i<futures.size(); i++){
+                        String msg = futures.get(0);
+                        futures.remove(0);
+
+                        try{
+
+                        }
+                        catch(Exception e){
+
+                        }
+                    }
+                }
+
+                while(futures.size()<max_workers){
+                    try{
+                        StringBuffer response = new StringBuffer();
+                        g2.getRedoRecord(response);
+                        if(response==NULL)
+                            System.out.println("No redo records available. Pausing for " + EMPTY_PAUSE_TIME + " seconds.");
+                            int emtpy_pause = time.instant() + EMPTY_PAUSE_TIME;
+                            break;
+                    }
+                    String msg = response.toString();
+                    futures[executor.submit(processMsg, g2, msg, args.info)] = (msg, time.instant());
+                    catch(Exception e){
+
+                    }
+                }
+            }
+        }
+        catch(Exception e){
+
+        }
 
         
         System.exit(0);
     }
 
-    private string processMsg(G2JNI engine, string msg, string info){
+    private string processMsg(G2JNI engine, String msg, String info){
         int returnCode = 0;
         if(info != NULL){
             Stringbuffer response = new StringBuffer();
