@@ -6,10 +6,10 @@ import java.time;
 import java.io.StringReader;
 
 import java.util.concurrent.*;
-
+/*
 import javax.json.Json;
 import javax.json.JsonArray;
-import javax.json.JsonObject;
+import javax.json.JsonObject;*/
 //********
 
 public class simpleRedoer {
@@ -107,7 +107,7 @@ public class simpleRedoer {
             System.out.println(e);
         }
 
-        
+        executor.shutdown();
         System.exit(0);
     }
 
