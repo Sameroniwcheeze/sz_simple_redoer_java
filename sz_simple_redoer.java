@@ -17,16 +17,22 @@ public class simpleRedoer {
     private Clock time;
     public static void main(String[] args){
         static int INTERVAL = 1000;
-        string longRecord = System.getenv("LONG_RECORD");
+        String longRecord = System.getenv("LONG_RECORD");
         if(longRecord != NULL)
             static int LONG_RECORD = Integer.parseInt(longRecord);
         else
             static int LONG_RECORD = 300;
-        string pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
+        String pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
         if(pauseTime != NULL)
             static int EMPTY_PAUSE_TIME = Integer.parseInt(pauseTime);
         else
             static int EMPTY_PAUSE_TIME = 60;
+
+        String logLevel = System.getenv("SENZING_LOG_LEVEL");
+        if(logLevel!=NULL)
+            String SENZING_LOG_LEVEL = logLevel;
+        else
+            String SENZING_LOG_LEVEL = "info";
 
         //Setup info and logging
 
@@ -79,6 +85,7 @@ public class simpleRedoer {
                     }
                 }
 
+                //Add processing the messages to the queue until the amount in the queue is equal to the number of workers.
                 while(futures.size()<max_workers){
                     try{
                         StringBuffer response = new StringBuffer();
@@ -89,15 +96,15 @@ public class simpleRedoer {
                             break;
                     }
                     String msg = response.toString();
-                    futures[executor.submit(processMsg, g2, msg, args.info)] = (msg, time.instant());
+                    futures[executor.submit(new processMsg(g2, msg, SENZING_LOG_LEVEL))] = (msg, time.instant());
                     catch(Exception e){
-
+                        System.out.println(e);
                     }
                 }
             }
         }
         catch(Exception e){
-
+            System.out.println(e);
         }
 
         
