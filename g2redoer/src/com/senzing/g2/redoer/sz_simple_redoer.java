@@ -4,131 +4,126 @@ package com.senzing.g2.redoer;
 import com.senzing.g2.engine.G2JNI;
 import com.senzing.g2.engine.Result;
 
-import java.time;
+import java.time.Instant;
 import java.io.StringReader;
 
 import java.util.concurrent.*;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.HashSet;
+
 /*
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;*/
 //********
 
-public class simpleRedoer {
+public class sz_simple_redoer {
 
-    private Clock time;
     public static void main(String[] args){
-        static int INTERVAL = 1000;
+    	System.out.println("Making variables");
+        int INTERVAL = 1000;
         String longRecord = System.getenv("LONG_RECORD");
-        if(longRecord != NULL)
-            static int LONG_RECORD = Integer.parseInt(longRecord);
-        else
-            static int LONG_RECORD = 300;
+        int LONG_RECORD = 300;
+        if(longRecord != null){
+            LONG_RECORD = Integer.parseInt(longRecord);}
         String pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
-        if(pauseTime != NULL)
-            static int EMPTY_PAUSE_TIME = Integer.parseInt(pauseTime);
-        else
-            static int EMPTY_PAUSE_TIME = 60;
+        int EMPTY_PAUSE_TIME = 60;
+        if(pauseTime != null){
+            EMPTY_PAUSE_TIME = Integer.parseInt(pauseTime);}
 
         String logLevel = System.getenv("SENZING_LOG_LEVEL");
-        if(logLevel!=NULL)
-            String SENZING_LOG_LEVEL = logLevel;
-        else
-            String SENZING_LOG_LEVEL = "info";
+        String SENZING_LOG_LEVEL = (logLevel!=null) ? logLevel: "info";
 
         //Setup info and logging
 
-        engineConfig = os.getenv("SENZING_ENGINE_CONFIGURATION_JSON");
+        String engineConfig = System.getenv("SENZING_ENGINE_CONFIGURATION_JSON");
 
-        if(engineConfig == NULL){
+        if(engineConfig == null){
             System.out.println("The environment variable SENZING_ENGINE_CONFIGURATION_JSON must be set with a proper JSON configuration.");
             System.out.println("Please see https://senzing.zendesk.com/hc/en-us/articles/360038774134-G2Module-Configuration-and-the-Senzing-API");
             System.exit(-1);
         }
-
+	System.out.println("Initalizing engine");
         G2JNI g2 = new G2JNI();
-        g2.init("sz_simple_redoer", engineConfig, args.debugTrace);
-        int logCheckTime = int prevTime = time.instant();
-
-        string threads = System.getenv("SENZING_THREADS_PER_PROCESS");
-        if(threds != NULL)
-            int max_workers = Integer.parseInt(threads);
-        else
-            int max_workers = 0;
+        g2.init("sz_simple_redoer", engineConfig, false);
+        Instant logCheckTime = Instant.now();
+	Instant prevTime = logCheckTime;
+	
+        String threads = System.getenv("SENZING_THREADS_PER_PROCESS");
+        int max_workers = 8;
+        if(threads != null){
+            max_workers = Integer.parseInt(threads);}
 
         int messages = 0;
 
         ExecutorService executor = Executors.newFixedThreadPool(max_workers);
-        System.out.println("Threads: " + executor.max_workers());
+        System.out.println("Threads: " + max_workers);
         int emptyPause = 0;
+        
+	HashMap<Future<String>,String> futures=new HashMap<Future<String>,String>();
+	CompletionService<String> CS = new ExecutorCompletionService<String>(executor);
+	Future<String> doneFuture = null;
+	try{
+		while(true){
 
-        List<Future<String, Integer>> futures = NULL;
-        try{
-            while(true){
+			if(!futures.isEmpty()){
+				
+				while(doneFuture == null){
+					//doneFuture = CS.poll(10, TimeUnit.SECONDS);
+					doneFuture = CS.poll(10, TimeUnit.SECONDS);
+					System.out.println(doneFuture);
+				}
 
-                int nowTime = time.instant();
-
-                if(futures!=NULL){
-                    futures.get(10, TimeUnit.SECONDS);
-
-                    //delete_batch = [];
-                    int deleteCnt = 0;
-                    
-                    for(int i = 0; i<futures.size(); i++){
-                        String msg = futures.get(0);
-                        futures.remove(0);
-
-                        try{
-
-                        }
-                        catch(Exception e){
-
-                        }
-                    }
-                }
-
-                //Add processing the messages to the queue until the amount in the queue is equal to the number of workers.
-                while(futures.size()<max_workers){
-                    try{
-                        StringBuffer response = new StringBuffer();
-                        g2.getRedoRecord(response);
-                        if(response==NULL)
-                            System.out.println("No redo records available. Pausing for " + EMPTY_PAUSE_TIME + " seconds.");
-                            int emtpy_pause = time.instant() + EMPTY_PAUSE_TIME;
-                            break;
-                    }
-                    String msg = response.toString();
-                    futures[executor.submit(new processMsg(g2, msg, SENZING_LOG_LEVEL))] = (msg, time.instant());
-                    catch(Exception e){
-                        System.out.println(e);
-                    }
-                }
-            }
-        }
-        catch(Exception e){
-            System.out.println(e);
-        }
-
-        executor.shutdown();
-        System.exit(0);
+				while(doneFuture!=null){
+					System.out.println("Printing completed future(s)");
+					System.out.println(doneFuture.get());
+					futures.remove(doneFuture);
+					doneFuture = CS.poll();
+					messages++;
+				}
+			}
+		        //Add processing the messages to the queue until the amount in the queue is equal to the number of workers.
+		        while(futures.size()<max_workers){
+		                StringBuffer response = new StringBuffer();
+		                g2.getRedoRecord(response);
+		                if(response.length()==0){
+		                    //System.out.println("No redo records available. Pausing for " + String.valueOf(EMPTY_PAUSE_TIME) + " seconds.");
+		                    System.out.println("No redo records available.");
+		                    //int emtpy_pause = Instant.now() + EMPTY_PAUSE_TIME;
+		                    System.out.println("Processed a total of " + String.valueOf(messages) + " messages");
+		                    executor.shutdown();
+	       			    System.exit(0);
+		                    break;
+		                }
+		            String msg = response.toString();
+		            
+		            //int time = (int)Instant.toEpochMilli();
+		            futures.put(CS.submit(() -> processMsg(g2, msg, SENZING_LOG_LEVEL)), msg);
+			}
+		}
+	}
+	catch(Exception e){
+	}
     }
 
-    private string processMsg(G2JNI engine, String msg, String info){
+    private static String processMsg(G2JNI engine, String msg, String info){
         int returnCode = 0;
-        if(info != NULL){
-            Stringbuffer response = new StringBuffer();
-            returnCode = engine.processWithInfo(msg, response);
+        if(info != null){
+            StringBuffer response = new StringBuffer();
+            long g2DefaultFlag = engine.G2_RECORD_DEFAULT_FLAGS;	
+            returnCode = engine.processWithInfo(msg, g2DefaultFlag, response);
             if(returnCode!=0){
-                System.out.println("Exception " + g2engine.getLastException() + " on message: " + msg);
-                break;
+                System.out.println("Exception " + engine.getLastException() + " on message: " + msg);
+                return null;
             }
             return response.toString();
         }
         else{
             returnCode = engine.process(msg);
             if(returnCode!=0)
-                System.out.println("Exception " + g2engine.getLastException() + " on message: " + msg);
+                System.out.println("Exception " + engine.getLastException() + " on message: " + msg);
         }
-        return NULL;
+        return null;
     }
 }
