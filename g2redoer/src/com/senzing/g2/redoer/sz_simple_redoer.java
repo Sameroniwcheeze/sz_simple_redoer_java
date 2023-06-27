@@ -96,6 +96,7 @@ public class sz_simple_redoer {
 					long time = futuresTime.get(key);
 					if(time >= System.currentTimeMillis() + LONG_RECORD){
 						System.out.println("This record has been processing for " + String.valueOf((System.currentTimeMillis()-time)/(1000.0*60.0)) + " minutes");
+						System.out.println(futures.get(key));
 						numStuck++;
 					}
 					if(numStuck>=max_workers){
