@@ -44,6 +44,7 @@ public class sz_simple_redoer {
             System.out.println("Please see https://senzing.zendesk.com/hc/en-us/articles/360038774134-G2Module-Configuration-and-the-Senzing-API");
             System.exit(-1);
         }
+        int returnCode = 0;
 	System.out.println("Initalizing engine");
         G2JNI g2 = new G2JNI();
         g2.init("sz_simple_redoer", engineConfig, false);
@@ -86,15 +87,18 @@ public class sz_simple_redoer {
 		        //Add processing the messages to the queue until the amount in the queue is equal to the number of workers.
 		        while(futures.size()<max_workers){
 		                StringBuffer response = new StringBuffer();
-		                g2.getRedoRecord(response);
-		                if(response.length()==0){
-		                    //System.out.println("No redo records available. Pausing for " + String.valueOf(EMPTY_PAUSE_TIME) + " seconds.");
-		                    System.out.println("No redo records available.");
-		                    //int emtpy_pause = Instant.now() + EMPTY_PAUSE_TIME;
+		                returnCode = g2.getRedoRecord(response);
+		                if(returnCode!=0){
+		                    System.out.println("Exception " + g2.getLastException() + " on get redo.");
 		                    System.out.println("Processed a total of " + String.valueOf(messages) + " messages");
 		                    executor.shutdown();
+		                    g2.destroy();
 	       			    System.exit(0);
-		                    break;
+		                }
+		                if(response.length()==0){
+		                    System.out.println("No redo records available. Pausing for " + String.valueOf(EMPTY_PAUSE_TIME) + " seconds.");
+				    TimeUnit.SECONDS.sleep(EMPTY_PAUSE_TIME);
+				    break;
 		                }
 		            String msg = response.toString();
 		            
@@ -104,6 +108,10 @@ public class sz_simple_redoer {
 		}
 	}
 	catch(Exception e){
+	    System.out.println("Processed a total of " + String.valueOf(messages) + " messages");
+            executor.shutdown();
+            g2.destroy();
+	    System.exit(0);
 	}
     }
 
