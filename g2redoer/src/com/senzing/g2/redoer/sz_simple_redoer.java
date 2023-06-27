@@ -26,7 +26,6 @@ public class sz_simple_redoer {
         
         String longRecord = System.getenv("LONG_RECORD");
         long LONG_RECORD = (longRecord!=null) ? Integer.parseInt(longRecord): 300000;
-
         String pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
         int EMPTY_PAUSE_TIME = (pauseTime!=null) ? Integer.parseInt(pauseTime): 60;
 
@@ -94,8 +93,8 @@ public class sz_simple_redoer {
 				while(futureIt.hasNext()){
 					Future<String> key = (Future<String>)futureIt.next();
 					long time = futuresTime.get(key);
-					if(time >= System.currentTimeMillis() + LONG_RECORD){
-						System.out.println("This record has been processing for " + String.valueOf((System.currentTimeMillis()-time)/(1000.0*60.0)) + " minutes");
+					if(LONG_RECORD <= System.currentTimeMillis() - time){
+						System.out.printf("This record has been processing for %.2f minutes\n", (System.currentTimeMillis()-time)/(1000.0*60.0));
 						System.out.println(futures.get(key));
 						numStuck++;
 					}
