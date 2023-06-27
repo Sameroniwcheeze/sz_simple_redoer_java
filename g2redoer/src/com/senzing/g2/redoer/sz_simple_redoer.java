@@ -4,13 +4,14 @@ package com.senzing.g2.redoer;
 import com.senzing.g2.engine.G2JNI;
 import com.senzing.g2.engine.Result;
 
-import java.time.Instant;
 import java.io.StringReader;
 
 import java.util.concurrent.*;
 import java.util.Set;
+import java.util.Iterator;
 import java.util.HashMap;
 import java.util.HashSet;
+
 
 /*
 import javax.json.Json;
@@ -21,22 +22,18 @@ import javax.json.JsonObject;*/
 public class sz_simple_redoer {
 
     public static void main(String[] args){
-    	System.out.println("Making variables");
-        int INTERVAL = 1000;
+        int INTERVAL = 100;
+        
         String longRecord = System.getenv("LONG_RECORD");
-        int LONG_RECORD = 300;
-        if(longRecord != null){
-            LONG_RECORD = Integer.parseInt(longRecord);}
+        long LONG_RECORD = (longRecord!=null) ? Integer.parseInt(longRecord): 300000;
+
         String pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
-        int EMPTY_PAUSE_TIME = 60;
-        if(pauseTime != null){
-            EMPTY_PAUSE_TIME = Integer.parseInt(pauseTime);}
+        int EMPTY_PAUSE_TIME = (pauseTime!=null) ? Integer.parseInt(pauseTime): 60;
 
         String logLevel = System.getenv("SENZING_LOG_LEVEL");
         String SENZING_LOG_LEVEL = (logLevel!=null) ? logLevel: "info";
 
         //Setup info and logging
-
         String engineConfig = System.getenv("SENZING_ENGINE_CONFIGURATION_JSON");
 
         if(engineConfig == null){
@@ -45,14 +42,11 @@ public class sz_simple_redoer {
             System.exit(-1);
         }
         int returnCode = 0;
-	System.out.println("Initalizing engine");
         G2JNI g2 = new G2JNI();
         g2.init("sz_simple_redoer", engineConfig, false);
-        Instant logCheckTime = Instant.now();
-	Instant prevTime = logCheckTime;
 	
         String threads = System.getenv("SENZING_THREADS_PER_PROCESS");
-        int max_workers = 8;
+        int max_workers = 4;
         if(threads != null){
             max_workers = Integer.parseInt(threads);}
 
@@ -63,26 +57,52 @@ public class sz_simple_redoer {
         int emptyPause = 0;
         
 	HashMap<Future<String>,String> futures=new HashMap<Future<String>,String>();
+	HashMap<Future<String>,Long> futuresTime=new HashMap<Future<String>,Long>();
 	CompletionService<String> CS = new ExecutorCompletionService<String>(executor);
 	Future<String> doneFuture = null;
+	long logCheckTime = System.currentTimeMillis();
+	long prevTime = logCheckTime;
 	try{
 		while(true){
 
 			if(!futures.isEmpty()){
-				
-				while(doneFuture == null){
-					//doneFuture = CS.poll(10, TimeUnit.SECONDS);
-					doneFuture = CS.poll(10, TimeUnit.SECONDS);
-					System.out.println(doneFuture);
-				}
+				doneFuture = CS.poll(10, TimeUnit.SECONDS);
 
 				while(doneFuture!=null){
-					System.out.println("Printing completed future(s)");
-					System.out.println(doneFuture.get());
+
+					System.out.print(doneFuture.get());
 					futures.remove(doneFuture);
+					System.out.println(" it took " + String.valueOf(-futuresTime.get(doneFuture)+System.currentTimeMillis()) + " mseconds");
+					futuresTime.remove(doneFuture);
 					doneFuture = CS.poll();
 					messages++;
 				}
+			}
+			
+			if(messages%INTERVAL==0){
+				long diff = System.currentTimeMillis()-prevTime;
+				long speed = (diff>0) ? 1000*((long)INTERVAL)/diff: 0;
+				System.out.println("Processed " + String.valueOf(messages) + " redo, " + String.valueOf(speed) + " records per second");
+				prevTime = System.currentTimeMillis();
+			}
+			
+			if(System.currentTimeMillis()>(logCheckTime+(LONG_RECORD/2))){
+				int numStuck = 0;
+				System.out.println(g2.stats());
+				Set<Future<String>> runningFutures = futures.keySet();
+				Iterator futureIt = runningFutures.iterator();
+				while(futureIt.hasNext()){
+					Future<String> key = (Future<String>)futureIt.next();
+					long time = futuresTime.get(key);
+					if(time >= System.currentTimeMillis() + LONG_RECORD){
+						System.out.println("This record has been processing for " + String.valueOf((System.currentTimeMillis()-time)/(1000.0*60.0)) + " minutes");
+						numStuck++;
+					}
+					if(numStuck>=max_workers){
+						System.out.println("All " + String.valueOf(max_workers) + " threads are stuck on long records");
+					}
+				}
+				logCheckTime=System.currentTimeMillis();
 			}
 		        //Add processing the messages to the queue until the amount in the queue is equal to the number of workers.
 		        while(futures.size()<max_workers){
@@ -102,12 +122,14 @@ public class sz_simple_redoer {
 		                }
 		            String msg = response.toString();
 		            
-		            //int time = (int)Instant.toEpochMilli();
-		            futures.put(CS.submit(() -> processMsg(g2, msg, SENZING_LOG_LEVEL)), msg);
+		            Future<String> putFuture = CS.submit(() -> processMsg(g2, msg, SENZING_LOG_LEVEL));
+		            futures.put(putFuture, msg);
+		            futuresTime.put(putFuture, System.currentTimeMillis());
 			}
 		}
 	}
 	catch(Exception e){
+	    System.out.println(e);
 	    System.out.println("Processed a total of " + String.valueOf(messages) + " messages");
             executor.shutdown();
             g2.destroy();
