@@ -1,7 +1,7 @@
-# sz_simple_redoer
+# sz_simple_redoer_java
 
 # Overview
-Simple parallel redo processor using the Senzing API and is meant to provide developers with a simple starting point for a simple, scalable redo processor.  This took 15minutes to adapt from the sz_sqs_consumer project.
+Simple parallel redo processor using the Senzing API and is meant to provide developers with a simple starting point for a simple, scalable redo processor.  This is leveraging the Java API.
 
 It is a limited function [more or less] drop in replacement for the senzing/redoer.
 
@@ -32,8 +32,8 @@ LONG_RECORD: (default: 300 seconds)
 
 ## Building/Running
 ```
-docker build -t brian/sz_simple_redoer .
-docker run --user $UID -it -e SENZING_ENGINE_CONFIGURATION_JSON brian/sz_simple_redoer
+docker build -t brian/sz_simple_redoer_java .
+docker run --user $UID -it -e SENZING_ENGINE_CONFIGURATION_JSON brian/sz_simple_redoer_java
 ```
 
 ## Additional items to note

@@ -13,12 +13,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 
-/*
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;*/
-//********
-
 public class sz_simple_redoer {
 
     public static void main(String[] args){
@@ -42,7 +36,7 @@ public class sz_simple_redoer {
         }
         int returnCode = 0;
         G2JNI g2 = new G2JNI();
-        g2.init("sz_simple_redoer", engineConfig, false);
+        g2.init("sz_simple_redoer_java", engineConfig, false);
 	
         String threads = System.getenv("SENZING_THREADS_PER_PROCESS");
         int max_workers = 4;
@@ -122,7 +116,7 @@ public class sz_simple_redoer {
 		                }
 		            String msg = response.toString();
 		            
-		            Future<String> putFuture = CS.submit(() -> processMsg(g2, msg, SENZING_LOG_LEVEL));
+		            Future<String> putFuture = CS.submit(() -> processMsg(g2, msg, true));
 		            futures.put(putFuture, msg);
 		            futuresTime.put(putFuture, System.currentTimeMillis());
 			}
@@ -137,12 +131,11 @@ public class sz_simple_redoer {
 	}
     }
 
-    private static String processMsg(G2JNI engine, String msg, String info){
+    private static String processMsg(G2JNI engine, String msg, boolean withInfo){
         int returnCode = 0;
-        if(info != null){
+        if(withInfo){
             StringBuffer response = new StringBuffer();
-            long g2DefaultFlag = engine.G2_RECORD_DEFAULT_FLAGS;	
-            returnCode = engine.processWithInfo(msg, g2DefaultFlag, response);
+            returnCode = engine.processWithInfo(msg, 0, response);
             if(returnCode!=0){
                 System.out.println("Exception " + engine.getLastException() + " on message: " + msg);
                 return null;
@@ -153,7 +146,7 @@ public class sz_simple_redoer {
             returnCode = engine.process(msg);
             if(returnCode!=0)
                 System.out.println("Exception " + engine.getLastException() + " on message: " + msg);
+            return null;
         }
-        return null;
     }
 }
