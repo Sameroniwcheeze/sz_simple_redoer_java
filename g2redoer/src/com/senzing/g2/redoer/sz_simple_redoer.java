@@ -16,12 +16,12 @@ import java.util.HashSet;
 public class sz_simple_redoer {
 
     public static void main(String[] args){
-        int INTERVAL = 100;
+        int INTERVAL = 1000;
         
         String longRecord = System.getenv("LONG_RECORD");
-        long LONG_RECORD = (longRecord!=null) ? Integer.parseInt(longRecord): 300000;
+        long LONG_RECORD = (longRecord!=null) ? Integer.parseInt(longRecord)*1000: 300*1000;
         String pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
-        int EMPTY_PAUSE_TIME = (pauseTime!=null) ? Integer.parseInt(pauseTime): 60;
+        int EMPTY_PAUSE_TIME = (pauseTime!=null) ? Integer.parseInt(pauseTime)*1000: 60*1000;
 
         String logLevel = System.getenv("SENZING_LOG_LEVEL");
         String SENZING_LOG_LEVEL = (logLevel!=null) ? logLevel: "info";
@@ -63,18 +63,16 @@ public class sz_simple_redoer {
 
 				while(doneFuture!=null){
 
-					System.out.print(doneFuture.get());
+					messages++;
 					futures.remove(doneFuture);
-					System.out.println(" it took " + String.valueOf(-futuresTime.get(doneFuture)+System.currentTimeMillis()) + " mseconds");
 					futuresTime.remove(doneFuture);
 					doneFuture = CS.poll();
-					messages++;
 				}
 			}
 			
-			if(messages%INTERVAL==0){
-				long diff = System.currentTimeMillis()-prevTime;
-				long speed = (diff>0) ? 1000*((long)INTERVAL)/diff: 0;
+			if(messages%INTERVAL==0 && messages != 0){
+				long diff = (System.currentTimeMillis()-prevTime)/1000;
+				long speed = (diff>0) ? ((long)INTERVAL)/diff: 0;
 				System.out.println("Processed " + String.valueOf(messages) + " redo, " + String.valueOf(speed) + " records per second");
 				prevTime = System.currentTimeMillis();
 			}
