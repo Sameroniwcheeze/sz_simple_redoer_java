@@ -9,17 +9,17 @@ import java.io.StringReader;
 import java.util.concurrent.*;
 import java.util.Set;
 import java.util.Iterator;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.HashSet;
 
 
 public class SzSimpleRedoer {
 
     public static void main(String[] args){
-        int INTERVAL = 1000;
+        int INTERVAL = 100;
         
         String longRecord = System.getenv("LONG_RECORD");
-        long LONG_RECORD = (longRecord!=null) ? Integer.parseInt(longRecord)*1000: 300*1000;
+        long LONG_RECORD = (longRecord!=null) ? Long.parseLong(longRecord)*1000l: 300l*1000l;
         String pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
         int EMPTY_PAUSE_TIME = (pauseTime!=null) ? Integer.parseInt(pauseTime): 60;
 
@@ -49,45 +49,38 @@ public class SzSimpleRedoer {
         System.out.println("Threads: " + maxWorkers);
         int emptyPause = 0;
         
-	HashMap<Future<String>,String> futures=new HashMap<Future<String>,String>();
-	HashMap<Future<String>,Long> futuresTime=new HashMap<Future<String>,Long>();
+	IdentityHashMap<Future<String>,FutureData> futures=new IdentityHashMap<>();
 	CompletionService<String> compService = new ExecutorCompletionService<String>(executor);
 	Future<String> doneFuture = null;
 	long logCheckTime = System.currentTimeMillis();
 	long prevTime = logCheckTime;
 	try{
 		while(true){
-
 			if(!futures.isEmpty()){
 				doneFuture = compService.poll(10, TimeUnit.SECONDS);
-
 				while(doneFuture!=null){
-
 					messages++;
 					futures.remove(doneFuture);
-					futuresTime.remove(doneFuture);
 					doneFuture = compService.poll();
 				}
 			}
-			
 			if(messages%INTERVAL==0 && messages != 0){
-				double diff = (System.currentTimeMillis()-prevTime)/1000;
-				long speed = (diff>0) ? (long)(INTERVAL/diff): 0;
-				System.out.println("Processed " + String.valueOf(messages) + " redo, " + String.valueOf(speed) + " records per second");
+				double diff = (System.currentTimeMillis()-prevTime)/1000.0;
+				double speed = (diff>0.0) ? ((double)INTERVAL/diff): 0;
+				System.out.printf("Processed " + String.valueOf(messages) + " redo, %.0f records per second\n", speed);
 				prevTime = System.currentTimeMillis();
 			}
 			
 			if(System.currentTimeMillis()>(logCheckTime+(LONG_RECORD/2))){
 				int numStuck = 0;
 				System.out.println(g2.stats());
-				Set<Future<String>> runningFutures = futures.keySet();
-				Iterator futureIt = runningFutures.iterator();
-				while(futureIt.hasNext()){
-					Future<String> key = (Future<String>)futureIt.next();
-					long time = futuresTime.get(key);
+				for (Future<String> future: futures.keySet()) {
+					FutureData longRecordData= futures.get(future);
+					long time = longRecordData.time;
 					if(LONG_RECORD <= System.currentTimeMillis() - time){
+						String longRecordMsg = longRecordData.message;
 						System.out.printf("This record has been processing for %.2f minutes\n", (System.currentTimeMillis()-time)/(1000.0*60.0));
-						System.out.println(futures.get(key));
+						System.out.println(longRecordMsg);
 						numStuck++;
 					}
 					if(numStuck>=maxWorkers){
@@ -113,10 +106,9 @@ public class SzSimpleRedoer {
 				    break;
 		                }
 		            String msg = response.toString();
-		            
-		            Future<String> putFuture = compService.submit(() -> processMsg(g2, msg, true));
-		            futures.put(putFuture, msg);
-		            futuresTime.put(putFuture, System.currentTimeMillis());
+		            FutureData futDat = new FutureData();
+		            Future<String> putFuture = compService.submit(() -> processMsg(g2, msg, true, futDat));
+		            futures.put(putFuture, futDat);
 			}
 		}
 	}
@@ -129,8 +121,10 @@ public class SzSimpleRedoer {
 	}
     }
 
-    private static String processMsg(G2JNI engine, String msg, boolean withInfo){
+    private static String processMsg(G2JNI engine, String msg, boolean withInfo, FutureData futDat){
         int returnCode = 0;
+        futDat.message = msg;
+        futDat.time = System.currentTimeMillis();
         if(withInfo){
             StringBuffer response = new StringBuffer();
             returnCode = engine.processWithInfo(msg, 0, response);
@@ -147,4 +141,8 @@ public class SzSimpleRedoer {
             return null;
         }
     }
+	private static class FutureData {
+	   private String message;
+	   private long time;
+	}
 }
