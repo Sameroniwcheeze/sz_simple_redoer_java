@@ -36,5 +36,5 @@ RUN apt-get update \
  && apt-get -y clean
 
 WORKDIR /app
-CMD ["java", "-classpath", "g2redoer-1.0.0-SNAPSHOT.jar", "com.senzing.g2.redoer.sz_simple_redoer"]
+CMD ["java", "-jar", "g2redoer-1.0.0-SNAPSHOT.jar"]
 
