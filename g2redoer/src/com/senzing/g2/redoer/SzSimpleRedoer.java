@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 
-public class sz_simple_redoer {
+public class SzSimpleRedoer {
 
     public static void main(String[] args){
         int INTERVAL = 1000;
@@ -39,19 +39,19 @@ public class sz_simple_redoer {
         g2.init("sz_simple_redoer_java", engineConfig, false);
 	
         String threads = System.getenv("SENZING_THREADS_PER_PROCESS");
-        int max_workers = 4;
+        int maxWorkers = 4;
         if(threads != null){
-            max_workers = Integer.parseInt(threads);}
+            maxWorkers = Integer.parseInt(threads);}
 
         int messages = 0;
 
-        ExecutorService executor = Executors.newFixedThreadPool(max_workers);
-        System.out.println("Threads: " + max_workers);
+        ExecutorService executor = Executors.newFixedThreadPool(maxWorkers);
+        System.out.println("Threads: " + maxWorkers);
         int emptyPause = 0;
         
 	HashMap<Future<String>,String> futures=new HashMap<Future<String>,String>();
 	HashMap<Future<String>,Long> futuresTime=new HashMap<Future<String>,Long>();
-	CompletionService<String> CS = new ExecutorCompletionService<String>(executor);
+	CompletionService<String> compService = new ExecutorCompletionService<String>(executor);
 	Future<String> doneFuture = null;
 	long logCheckTime = System.currentTimeMillis();
 	long prevTime = logCheckTime;
@@ -59,14 +59,14 @@ public class sz_simple_redoer {
 		while(true){
 
 			if(!futures.isEmpty()){
-				doneFuture = CS.poll(10, TimeUnit.SECONDS);
+				doneFuture = compService.poll(10, TimeUnit.SECONDS);
 
 				while(doneFuture!=null){
 
 					messages++;
 					futures.remove(doneFuture);
 					futuresTime.remove(doneFuture);
-					doneFuture = CS.poll();
+					doneFuture = compService.poll();
 				}
 			}
 			
@@ -90,14 +90,14 @@ public class sz_simple_redoer {
 						System.out.println(futures.get(key));
 						numStuck++;
 					}
-					if(numStuck>=max_workers){
-						System.out.println("All " + String.valueOf(max_workers) + " threads are stuck on long records");
+					if(numStuck>=maxWorkers){
+						System.out.println("All " + String.valueOf(maxWorkers) + " threads are stuck on long records");
 					}
 				}
 				logCheckTime=System.currentTimeMillis();
 			}
 		        //Add processing the messages to the queue until the amount in the queue is equal to the number of workers.
-		        while(futures.size()<max_workers){
+		        while(futures.size()<maxWorkers){
 		                StringBuffer response = new StringBuffer();
 		                returnCode = g2.getRedoRecord(response);
 		                if(returnCode!=0){
@@ -114,7 +114,7 @@ public class sz_simple_redoer {
 		                }
 		            String msg = response.toString();
 		            
-		            Future<String> putFuture = CS.submit(() -> processMsg(g2, msg, true));
+		            Future<String> putFuture = compService.submit(() -> processMsg(g2, msg, true));
 		            futures.put(putFuture, msg);
 		            futuresTime.put(putFuture, System.currentTimeMillis());
 			}
