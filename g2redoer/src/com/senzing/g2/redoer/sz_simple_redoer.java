@@ -21,7 +21,7 @@ public class sz_simple_redoer {
         String longRecord = System.getenv("LONG_RECORD");
         long LONG_RECORD = (longRecord!=null) ? Integer.parseInt(longRecord)*1000: 300*1000;
         String pauseTime = System.getenv("SENZING_REDO_SLEEP_TIME_IN_SECONDS");
-        int EMPTY_PAUSE_TIME = (pauseTime!=null) ? Integer.parseInt(pauseTime)*1000: 60*1000;
+        int EMPTY_PAUSE_TIME = (pauseTime!=null) ? Integer.parseInt(pauseTime): 60;
 
         String logLevel = System.getenv("SENZING_LOG_LEVEL");
         String SENZING_LOG_LEVEL = (logLevel!=null) ? logLevel: "info";
@@ -71,8 +71,8 @@ public class sz_simple_redoer {
 			}
 			
 			if(messages%INTERVAL==0 && messages != 0){
-				long diff = (System.currentTimeMillis()-prevTime)/1000;
-				long speed = (diff>0) ? ((long)INTERVAL)/diff: 0;
+				double diff = (System.currentTimeMillis()-prevTime)/1000;
+				long speed = (diff>0) ? (long)(INTERVAL/diff): 0;
 				System.out.println("Processed " + String.valueOf(messages) + " redo, " + String.valueOf(speed) + " records per second");
 				prevTime = System.currentTimeMillis();
 			}
