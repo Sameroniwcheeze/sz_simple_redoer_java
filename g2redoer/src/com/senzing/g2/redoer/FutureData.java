@@ -1,6 +1,11 @@
 package com.senzing.g2.redoer;
 
 public class FutureData {
-   private String message;
-   private long time;
+
+   long time;
+   String message;
+   
+   public FutureData(String msg){
+   	message = msg;
+   }
 }

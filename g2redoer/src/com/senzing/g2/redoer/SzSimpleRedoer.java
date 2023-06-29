@@ -106,7 +106,7 @@ public class SzSimpleRedoer {
 				    break;
 		                }
 		            String msg = response.toString();
-		            FutureData futDat = new FutureData();
+		            FutureData futDat = new FutureData(msg);
 		            Future<String> putFuture = compService.submit(() -> processMsg(g2, msg, true, futDat));
 		            futures.put(putFuture, futDat);
 			}
@@ -123,7 +123,6 @@ public class SzSimpleRedoer {
 
     private static String processMsg(G2JNI engine, String msg, boolean withInfo, FutureData futDat){
         int returnCode = 0;
-        futDat.message = msg;
         futDat.time = System.currentTimeMillis();
         if(withInfo){
             StringBuffer response = new StringBuffer();
@@ -141,8 +140,4 @@ public class SzSimpleRedoer {
             return null;
         }
     }
-	private static class FutureData {
-	   private String message;
-	   private long time;
-	}
 }
