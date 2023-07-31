@@ -63,6 +63,11 @@
   		<artifactId>g2</artifactId>
   		<version>3.0.1</version>
  	</dependency>
+ 	<dependency>
+	  <groupId>com.rabbitmq</groupId>
+	  <artifactId>amqp-client</artifactId>
+	  <version>5.18.0</version>
+	</dependency>
   	<dependency>
   		<groupId>org.apache.commons</groupId>
   		<artifactId>commons-csv</artifactId>

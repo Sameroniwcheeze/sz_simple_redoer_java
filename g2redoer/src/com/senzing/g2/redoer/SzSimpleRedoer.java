@@ -4,6 +4,8 @@ package com.senzing.g2.redoer;
 import com.senzing.g2.engine.G2JNI;
 import com.senzing.g2.engine.Result;
 
+import com.rabbitmq.client.*;
+
 import java.io.StringReader;
 
 import java.util.concurrent.*;
@@ -28,12 +30,18 @@ public class SzSimpleRedoer {
 
         //Setup info and logging
         String engineConfig = System.getenv("SENZING_ENGINE_CONFIGURATION_JSON");
-
+        String infoQueue = System.getenv("SENZING_RABBITMQ_INFO_QUEUE");
+	String amqpUrl = System.getenv("SENZING_AMQP_URL");
+	if(amqpUrl == null || infoQueue == null){
+		System.out.println("Make sure all required environment variables are set.");
+		System.exit(-1);
+	}
         if(engineConfig == null){
             System.out.println("The environment variable SENZING_ENGINE_CONFIGURATION_JSON must be set with a proper JSON configuration.");
             System.out.println("Please see https://senzing.zendesk.com/hc/en-us/articles/360038774134-G2Module-Configuration-and-the-Senzing-API");
             System.exit(-1);
         }
+        
         int returnCode = 0;
         G2JNI g2 = new G2JNI();
         g2.init("sz_simple_redoer_java", engineConfig, false);
@@ -54,12 +62,24 @@ public class SzSimpleRedoer {
 	Future<String> doneFuture = null;
 	long logCheckTime = System.currentTimeMillis();
 	long prevTime = logCheckTime;
+	Channel infoCh = null;
+	Connection conn = null;
+
 	try{
+	        ConnectionFactory factory = new ConnectionFactory();
+		factory.setUri(amqpUrl);
+		conn = factory.newConnection();
+		infoCh = conn.createChannel();
+		infoCh.queueDeclare(infoQueue, false, false, false, null);
 		while(true){
 			if(!futures.isEmpty()){
 				doneFuture = compService.poll(10, TimeUnit.SECONDS);
 				while(doneFuture!=null){
 					messages++;
+					String info = doneFuture.get();
+					if(info!=null){
+						infoCh.basicPublish("", infoQueue, null, info.getBytes());
+					}
 					futures.remove(doneFuture);
 					doneFuture = compService.poll();
 				}
@@ -113,8 +133,16 @@ public class SzSimpleRedoer {
 		}
 	}
 	catch(Exception e){
-	    System.out.println(e);
-	    System.out.println("Processed a total of " + String.valueOf(messages) + " messages");
+	    e.printStackTrace(System.out);
+	    System.out.println("Added a total of " + String.valueOf(messages) + " records");
+	    try{
+	    	if(infoCh!=null){
+	    		infoCh.close();
+	    		}
+	    }
+	    catch(Exception ex){
+	    //System.out.println(ex);
+	    }
             executor.shutdown();
             g2.destroy();
 	    System.exit(0);
