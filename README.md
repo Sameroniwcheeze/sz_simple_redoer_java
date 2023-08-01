@@ -20,6 +20,8 @@ For more details on the Senzing API go to https://docs.senzing.com
 ### Required parameter (environment)
 ```
 SENZING_ENGINE_CONFIGURATION_JSON
+SENZING_RABBITMQ_INFO_QUEUE
+SENZING_AMQP_URL
 ```
 
 ### Optional parameters (environment)
