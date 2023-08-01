@@ -16,7 +16,7 @@ import java.util.HashSet;
 public class SzSimpleRedoer {
 
     public static void main(String[] args){
-        int INTERVAL = 100;
+        int INTERVAL = 10000;
         
         String longRecord = System.getenv("LONG_RECORD");
         long LONG_RECORD = (longRecord!=null) ? Long.parseLong(longRecord)*1000l: 300l*1000l;
@@ -79,8 +79,7 @@ public class SzSimpleRedoer {
 					long time = longRecordData.time;
 					if(LONG_RECORD <= System.currentTimeMillis() - time){
 						String longRecordMsg = longRecordData.message;
-						System.out.printf("This record has been processing for %.2f minutes\n", (System.currentTimeMillis()-time)/(1000.0*60.0));
-						System.out.println(longRecordMsg);
+						System.out.printf("This record has been processing for %.2f minutes: %s\n", (System.currentTimeMillis()-time)/(1000.0*60.0), longRecordMsg);
 						numStuck++;
 					}
 					if(numStuck>=maxWorkers){
@@ -100,7 +99,7 @@ public class SzSimpleRedoer {
 		                    g2.destroy();
 	       			    System.exit(0);
 		                }
-		                if(response.length()==0){
+		                if(response.length()==0 && futures.size()==0){
 		                    System.out.println("No redo records available. Pausing for " + String.valueOf(EMPTY_PAUSE_TIME) + " seconds.");
 				    TimeUnit.SECONDS.sleep(EMPTY_PAUSE_TIME);
 				    break;
