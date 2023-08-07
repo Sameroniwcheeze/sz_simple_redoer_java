@@ -36,7 +36,11 @@ public class SzSimpleRedoer {
         }
         int returnCode = 0;
         G2JNI g2 = new G2JNI();
-        g2.init("sz_simple_redoer_java", engineConfig, false);
+        returnCode = g2.init("sz_simple_redoer_java", engineConfig, false);
+        if(returnCode!=0){
+	  System.out.println("Exception " + g2.getLastException() + " on init.");
+	  System.exit(-1);
+	}
 	
         String threads = System.getenv("SENZING_THREADS_PER_PROCESS");
         int maxWorkers = 4;
